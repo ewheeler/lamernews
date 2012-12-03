@@ -27,6 +27,7 @@ You need to install Redis and Ruby 1.8.7 with the following gems:
 * ruby-hmac
 * net/smtp
 * openssl (not needed but will speedup the authentication if available).
+* domainatrix
 
 How to contribute
 ===

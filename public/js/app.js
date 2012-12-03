@@ -48,6 +48,7 @@ function submit() {
         title: $("input[name=title]").val(),
         url: $("input[name=url]").val(),
         text: $("textarea[name=text]").val(),
+        username: $("input[name=username]").val(),
         apisecret: apisecret
     };
     var del = $("input[name=del]").length && $("input[name=del]").attr("checked");

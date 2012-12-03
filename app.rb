@@ -38,6 +38,7 @@ require 'comments'
 require 'pbkdf2'
 require 'mail'
 require 'openssl' if UseOpenSSL
+require 'domainatrix'
 
 Version = "0.11.0"
 
@@ -300,6 +301,10 @@ end
 
 get '/submit' do
     redirect "/login" if !$user
+    admin_fields = ""
+    if user_is_admin?($user)
+	admin_fields = H.label(:for => "username") {"username"}+H.inputtext(:id => "username", :name => "username", :size => 40, :value => (params[:username] ? H.entities(params[:username]) :""))
+    end
     H.set_title "Submit a new story - #{SiteName}"
     H.page {
         H.h2 {"Submit a new story"}+
@@ -314,6 +319,7 @@ get '/submit' do
                 H.br+
                 H.label(:for => "text") {"text"}+
                 H.textarea(:id => "text", :name => "text", :cols => 60, :rows => 10) {}+
+		admin_fields+
                 H.button(:name => "do_submit", :value => "Submit")
             }
         }+
@@ -470,13 +476,17 @@ get "/editnews/:news_id" do
     redirect "/login" if !$user
     news = get_news_by_id(params["news_id"])
     halt(404,"404 - This news does not exist.") if !news
-    halt(500,"Permission denied.") if $user['id'].to_i != news['user_id'].to_i
+    halt(500,"Permission denied.") if (!user_is_admin?($user) and $user['id'].to_i != news['user_id'].to_i)
 
     if news_domain(news)
         text = ""
     else
         text = news_text(news)
         news['url'] = ""
+    end
+    admin_fields = ""
+    if user_is_admin?($user)
+	admin_fields = H.label(:for => "username") {"username"}+H.inputtext(:id => "username", :name => "username", :size => 40, :value => (params[:username] ? news[:username] : ""))
     end
     H.set_title "Edit news - #{SiteName}"
     H.page {
@@ -498,6 +508,7 @@ get "/editnews/:news_id" do
                 }+H.br+
                 H.checkbox(:name => "del", :value => "1")+
                 "delete this news"+H.br+
+		admin_fields+
                 H.button(:name => "edit_news", :value => "Edit")
             }
         }+
@@ -759,18 +770,28 @@ post '/api/submit' do
         end
     end
     if params[:news_id].to_i == -1
-        if submitted_recently
+        if submitted_recently and !user_is_admin?($user)
             return {
                 :status => "err",
                 :error => "You have submitted a story too recently, "+
                 "please wait #{allowed_to_post_in_seconds} seconds."
             }.to_json
         end
-        news_id = insert_news(params[:title],params[:url],params[:text],
-                              $user["id"])
+	if user_is_admin?($user) and params[:username] and !params[:username].empty?
+	    news_id = insert_news(params[:title],params[:url],params[:text],
+				params[:username])
+	else
+	    news_id = insert_news(params[:title],params[:url],params[:text],
+				$user["id"])
+	end
     else
-        news_id = edit_news(params[:news_id],params[:title],params[:url],
-                            params[:text],$user["id"])
+	if user_is_admin?($user) and params[:username] and !params[:username].empty?
+	    news_id = edit_news(params[:news_id],params[:title],params[:url],
+				params[:text],params[:username])
+	else
+	    news_id = edit_news(params[:news_id],params[:title],params[:url],
+				params[:text],$user["id"])
+	end
         if !news_id
             return {
                 :status => "err",
@@ -1032,8 +1053,7 @@ def application_header
     }
     H.header {
         H.h1 {
-            H.a(:href => "/") {H.entities SiteName}+" "+
-            H.small {Version}
+            H.a(:href => "/") {H.entities SiteName}
         }+navbar+" "+rnavbar
     }
 end
@@ -1135,10 +1155,13 @@ end
 #               is nil. The second is the error message if the function
 #               failed (detected testing the first return value).
 def create_user(username,password)
+    if username.empty?
+        return nil, "Username cannot be blank."
+    end
     if $r.exists("username.to.id:#{username.downcase}")
         return nil, "Username is already taken, please try a different one."
     end
-    if rate_limit_by_ip(3600*15,"create_user",request.ip)
+    if !user_is_admin?($user) and rate_limit_by_ip(3600*15,"create_user",request.ip)
         return nil, "Please wait some time before creating a new user."
     end
     id = $r.incr("users.count")
@@ -1453,17 +1476,41 @@ end
 #
 # Return value: the ID of the inserted news, or the ID of the news with
 # the same URL recently added.
-def insert_news(title,url,text,user_id)
+def insert_news(title,url,text,username_or_user_id)
     # If we don't have an url but a comment, we turn the url into
     # text://....first comment..., so it is just a special case of
     # title+url anyway.
     textpost = url.length == 0
     if url.length == 0
         url = "text://"+text[0...CommentMaxLength]
+    else
+        url = tidy_url(url)
     end
     # Check for already posted news with the same URL.
     if !textpost and (id = $r.get("url:"+url))
         return id.to_i
+    end
+    if username_or_user_id.empty?
+        user_id = $user["id"]
+    elsif is_numeric? username_or_user_id
+	user_id = username_or_user_id
+    elsif username_or_user_id.length > 0
+	if $r.exists("username.to.id:#{username_or_user_id.downcase}")
+	    user_id = $r.get("username.to.id:#{username_or_user_id.downcase}")
+	else
+            if user_is_admin?($user)
+		auth, errmsg = create_user(username_or_user_id.downcase, "monkeys_of_doom")
+		if !auth
+		    puts errmsg
+		    return false
+		end
+		user_id = $r.get("username.to.id:#{username_or_user_id.downcase}")
+	    else
+	        return false
+	    end
+	end
+    else
+	return false
     end
     # We can finally insert the news.
     ctime = Time.new.to_i
@@ -1500,10 +1547,37 @@ end
 # On success but when a news deletion is performed (empty title) -1 is returned.
 # On failure (for instance news_id does not exist or does not match
 #             the specified user_id) false is returned.
-def edit_news(news_id,title,url,text,user_id)
+def edit_news(news_id,title,url,text,username_or_user_id)
     news = get_news_by_id(news_id)
-    return false if !news or news['user_id'].to_i != user_id.to_i
-    return false if !(news['ctime'].to_i > (Time.now.to_i - NewsEditTime))
+    if username_or_user_id.empty?
+	user_id = news['user_id']
+	username = news['username']
+    elsif is_numeric? username_or_user_id
+	user_id = news['user_id']
+	username = news['username']
+    elsif username_or_user_id.length > 0
+	username = username_or_user_id
+	if $r.exists("username.to.id:#{username_or_user_id.downcase}")
+	    user_id = $r.get("username.to.id:#{username_or_user_id.downcase}")
+	else
+            if user_is_admin?($user)
+		auth, errmsg = create_user(username_or_user_id.downcase, "monkeys_of_doom")
+		if !auth
+		    puts errmsg
+		    return false
+		end
+		user_id = $r.get("username.to.id:#{username_or_user_id.downcase}")
+	    else
+	        return false
+	    end
+	end
+    else
+	return false
+    end
+    return false if !news or (!user_is_admin?($user) and (news['user_id'].to_i != user_id.to_i))
+    if !user_is_admin?($user)
+        return false if !(news['ctime'].to_i > (Time.now.to_i - NewsEditTime))
+    end
 
     # If we don't have an url but a comment, we turn the url into
     # text://....first comment..., so it is just a special case of
@@ -1511,10 +1585,12 @@ def edit_news(news_id,title,url,text,user_id)
     textpost = url.length == 0
     if url.length == 0
         url = "text://"+text[0...CommentMaxLength]
+    else
+        url = tidy_url(url)
     end
     # Even for edits don't allow to change the URL to the one of a
     # recently posted news.
-    if !textpost and url != news['url']
+    if !textpost and url != news['url'] and !user_is_admin?($user)
         return false if $r.get("url:"+url)
         # No problems with this new url, but the url changed
         # so we unblock the old one and set the block in the new one.
@@ -1522,10 +1598,21 @@ def edit_news(news_id,title,url,text,user_id)
         $r.del("url:"+news['url'])
         $r.setex("url:"+url,PreventRepostTime,news_id) if !textpost
     end
+
+    # If posting user has been altered, transfer user.posted to new user
+    # TODO sketchy to do this before actually updating the news record..
+    if user_id != news["user_id"]
+        $r.zrem("user.posted:#{news["user_id"]}", news_id)
+        $r.zadd("user.posted:#{user_id}",news["ctime"],news_id)
+    end
+
     # Edit the news fields.
     $r.hmset("news:#{news_id}",
         "title", title,
-        "url", url)
+        "url", url,
+	"username", username,
+	"user_id", user_id)
+
     return news_id
 end
 
@@ -1620,8 +1707,8 @@ def news_to_html(news)
             if domain
                 "at "+H.entities(domain)
             else "" end +
-            if ($user and $user['id'].to_i == news['user_id'].to_i and
-                news['ctime'].to_i > (Time.now.to_i - NewsEditTime))
+            if ($user and (user_is_admin?($user) or $user['id'].to_i == news['user_id'].to_i) and
+                (user_is_admin?($user) or (news['ctime'].to_i > (Time.now.to_i - NewsEditTime))))
                 " " + H.a(:href => "/editnews/#{news["id"]}") {
                     "[edit]"
                 }
@@ -1792,7 +1879,7 @@ def insert_comment(news_id,user_id,comment_id,parent_id,body)
     # matches the user_id of the comment.
     # We also make sure the user is in time for an edit operation.
     c = Comments.fetch(news_id,comment_id)
-    return false if !c or c['user_id'].to_i != user_id.to_i
+    return false if !c or (!user_is_admin?($user) and (c['user_id'].to_i != user_id.to_i))
     return false if !(c['ctime'].to_i > (Time.now.to_i - CommentEditTime))
 
     if body.length == 0
@@ -1851,7 +1938,7 @@ def comment_to_html(c,u)
         }
     end
     show_edit_link = !c['topcomment'] &&
-                ($user && ($user['id'].to_i == c['user_id'].to_i)) &&
+                ($user && (user_is_admin?($user) || $user['id'].to_i == c['user_id'].to_i)) &&
                 (c['ctime'].to_i > (Time.now.to_i - CommentEditTime))
 
     comment_id = "#{news_id}-#{c['id']}"
@@ -2018,3 +2105,14 @@ def list_items(o)
     aux
 end
 
+def is_numeric?(obj)
+   obj.to_s.match(/\A[+-]?\d+?(\.\d+)?\Z/) == nil ? false : true
+end
+
+def tidy_url(str)
+    url = Domainatrix.parse(str)
+    sub = url.subdomain.split('.')
+    sub.delete('www')
+    tidy_url = url.scheme + '://' + sub.join('.') + url.domain + '.' + url.public_suffix + url.path
+    return tidy_url
+end

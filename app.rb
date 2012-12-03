@@ -1075,7 +1075,7 @@ def application_footer
     end
     H.footer {
         links = [
-            ["source code", "http://github.com/antirez/lamernews"],
+            ["source code", "http://github.com/ewheeler/lamernews"],
             ["rss feed", "/rss"],
             ["twitter", FooterTwitterLink],
             ["google group", FooterGoogleGroupLink]
@@ -2113,6 +2113,10 @@ def tidy_url(str)
     url = Domainatrix.parse(str)
     sub = url.subdomain.split('.')
     sub.delete('www')
-    tidy_url = url.scheme + '://' + sub.join('.') + url.domain + '.' + url.public_suffix + url.path
+    if sub.empty?
+        tidy_url = url.scheme + '://' + url.domain + '.' + url.public_suffix + url.path
+    else
+        tidy_url = url.scheme + '://' + sub.join('.') + '.' + url.domain + '.' + url.public_suffix + url.path
+    end
     return tidy_url
 end

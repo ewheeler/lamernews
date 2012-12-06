@@ -4,11 +4,13 @@ function login() {
         password: $("input[name=password]").val(),
     };
     var register = $("input[name=register]").attr("checked");
+    $("input[name=do_login]").replaceWith("<br/><img id='spinner' src='/images/ajax-loader.gif' alt='loading...'/>");
     $.ajax({
         type: register ? "POST" : "GET",
         url: register ? "/api/create_account" : "/api/login",
         data: data,
         success: function(r) {
+	    $("#spinner").hide();
             if (r.status == "ok") {
                 document.cookie =
                     'auth='+r.auth+
@@ -27,11 +29,13 @@ function reset_password() {
         username: $("input[name=username]").val(),
         email: $("input[name=email]").val(),
     };
+    $("input[name=do_submit]").replaceWith("<br/><img id='spinner' src='/images/ajax-loader.gif' alt='loading...'/>");
     $.ajax({
         type: "GET",
         url: "/api/reset-password",
         data: data,
         success: function(r) {
+	    $("#spinner").hide();
             if (r.status == "ok") {
                 window.location.href = "/reset-password-ok";
             } else {
@@ -52,11 +56,13 @@ function submit() {
         apisecret: apisecret
     };
     var del = $("input[name=del]").length && $("input[name=del]").attr("checked");
+    $("input[name=do_submit]").replaceWith("<br/><img id='spinner' src='/images/ajax-loader.gif' alt='loading...'/>");
     $.ajax({
         type: "POST",
         url: del ? "/api/delnews" : "/api/submit",
         data: data,
         success: function(r) {
+	    $("#spinner").hide();
             if (r.status == "ok") {
                 if (r.news_id == -1) {
                     window.location.href = "/";
@@ -78,11 +84,13 @@ function update_profile() {
         about: $("textarea[name=about]").val(),
         apisecret: apisecret
     };
+    $("input[name=update_profile]").replaceWith("<br/><img id='spinner' src='/images/ajax-loader.gif' alt='loading...'/>");
     $.ajax({
         type: "POST",
         url: "/api/updateprofile",
         data: data,
         success: function(r) {
+	    $("#spinner").hide();
             if (r.status == "ok") {
                 window.location.reload();
             } else {
@@ -101,11 +109,13 @@ function post_comment() {
         comment: $("textarea[name=comment]").val(),
         apisecret: apisecret
     };
+    $("input[name=post_comment]").replaceWith("<br/><img id='spinner' src='/images/ajax-loader.gif' alt='loading...'/>");
     $.ajax({
         type: "POST",
         url: "/api/postcomment",
         data: data,
         success: function(r) {
+	    $("#spinner").hide();
             if (r.status == "ok") {
                 if (r.op == "insert") {
                     window.location.href = "/news/"+r.news_id+"?r="+Math.random()+"#"+

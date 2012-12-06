@@ -1,8 +1,14 @@
 html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, big, cite, code, del, dfn, em, font, img, ins, kbd, q, s, samp, small, strike, strong, sub, sup, tt, var, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot, thead, tr, th, td { margin: 0; padding: 0; border: 0; outline: 0; font-weight: inherit; font-style: inherit; font-size: 100%; font-family: inherit; vertical-align: baseline; }
 
 body {
-    font-family: "Helvetica Neue";
+    font-family: "Open Sans", "Helvetica Neue", sans-serif;
     text-rendering: optimizeLegibility;
+    background: #0091C7 url(/images/small_tiles.png) repeat;
+    text-shadow: #fff 1px -1px .5px;
+}
+
+header {
+    text-shadow: #333 1px -1px .5px;
 }
 
 a {
@@ -11,8 +17,8 @@ a {
 }
 
 h2 {
-    margin-bottom:20px;
-    font-size:22px;
+    margin-bottom:1em;
+    font-size:1em;
     color:#333;
 }
 
@@ -23,31 +29,32 @@ li {
 header {
     display:block;
     position:relative;
-    padding: 15px 0px 0px 15px;
-    background-color:#eee;
+    padding: .66em 0px 0px .66em;
+    background: #eee url(/images/header-bg.jpeg) repeat-x;
     border-bottom: 1px #ccc solid;
+    min-height: 2.66em;
 }
 
 header h1 {
     display: inline;
     font-size:1.3em;
     font-weight:bold;
-    color:#333;
+    color:#fff;
 }
 
 header h1 a {
-    color:#333;
+    color:#fff;
 }
 
 header h1 small {
-    font-size: 14px;
+    font-size: 1em;
 }
 
 #content {
     display:block;
-    margin-top:20px;
-    margin-bottom:20px;
-    padding: 15px;
+    margin-top:1.33em;
+    margin-bottom:1.33em;
+    padding: .66em;
 }
 
 footer {
@@ -55,55 +62,60 @@ footer {
     border-top: 1px #ccc solid;
     text-align: center;
     color:#ccc;
-    font-size:14px;
-    margin-bottom:30px;
+    font-size: 1em;
+    min-height: 2.66em;
+}
+
+a:hover {
+    text-decoration: underline;
 }
 
 nav {
-    margin-bottom:15px;
+    margin-bottom:1.33em;
     display: inline;
 }
 
 nav a {
-    margin-left: 20px;
+    margin-left: 1.33em;
+    color:#fff;
 }
 
 #account {
     color:#aaa;
     position: absolute;
-    top: 5px;
-    right: 10px;
+    top: .33em;
+    right: .66em;
     font-weight:bold;
-    font-size:14px;
+    font-size: .9em;
 }
 
 #account a {
-    margin-left:10px;
-    margin-right:10px;
+    margin-left:.66em;
+    margin-right:.66em;
 }
 
 #login,#submitform {
     display:block;
     position:relative;
-    width:150px;
+    width:20em;
 }
 
 #login label, #submitform label {
-    font-size:12px;
+    font-size: 1em;
     font-weight:bold;
 }
 
 div #errormsg {
-    width:400px;
+    width:20em;
     color:#ff9999;
     font-weight:bold;
-    margin-top: 15px;
+    margin-top: .66em;
 }
 
 article {
     display: block;
-    font-size: 16px;
-    margin-bottom:15px;
+    font-size: 1em;
+    margin-bottom:.66em;
     border: 1px solid transparent;
 }
 
@@ -113,13 +125,13 @@ article.active {
 
 article h2 {
     display: inline;
-    font-size:20px;
+    font-size:1em;
 }
 
 article address {
     display: inline;
     color: #999;
-    font-size:14px;
+    font-size:.8em;
 }
 
 article h2 a {
@@ -131,7 +143,7 @@ article h2 a:visited {
 }
 
 article .uparrow, article .downarrow {
-    font-size: 16px;
+    font-size: large;
     cursor: pointer;
 }
 
@@ -144,13 +156,13 @@ article .downarrow {
 }
 
 article p {
-    font-size:14px;
+    font-size:.8em;
     color:#999;
-    margin-left:20px;
+    margin-left:2.66em;
 }
 
 article p a {
-    color: #666;
+    color: #555;
 }
 
 article.comment .uparrow.voted, article .uparrow.voted {
@@ -166,50 +178,51 @@ article .downarrow.disabled, .uparrow.disabled {
 }
 
 article.deleted {
-    padding-left:20px;
+    padding-left:.66em;
     color:#999;
 }
 
 form textarea {
-    font-family: Courier;
-    font-size:14px;
+    font-family: "Inconsolata" Courier monospace;
+    font-size: 1em;
 }
 
 .comment {
     position:relative;
-    width:500px;
+    width:40em;
     display:block;
-    margin-bottom:40px;
-    min-height:50px;
+    margin-bottom:1.66em;
+    min-height:2em;
+    margin-left: 1.33em;
 }
 
 .comment .avatar img {
     position:absolute;
     top:0px;
     left:0px;
-    width:48px;
-    height:48px;
+    width:32px;
+    height:32px;
 }
 
 .comment .info {
     position:relative;
-    left:60px;
-    font-size:14px;
+    left:2.66em;
+    font-size: .9em;
     color:#999;
 }
 
 .comment .info a.reply {
     text-decoration:underline;
-    padding-left:5px;
+    padding-left:.33em;
 }
 
 .comment pre {
-    width:50em;
+    width:40em;
     position:relative;
-    left:60px;
-    top:10px;
-    font-family: Courier;
-    font-size: 14px;
+    left:2.66em;
+    top:.33em;
+    font-family: "Inconsolata" Courier monospace;
+    font-size: .9em;
     white-space: pre-wrap;       /* css-3 */
     white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
     white-space: -pre-wrap;      /* Opera 4-6 */
@@ -219,13 +232,13 @@ form textarea {
 
 article.comment .uparrow, article.comment .downarrow {
     color:#aaa;
-    font-size:14px;
+    font-size: .9em;
 }
 
 note {
     color: #666;
-    margin-left:20px;
-    font-size:14px;
+    margin-left:1.33em;
+    font-size: .9em;
 }
 
 .comment.deleted {
@@ -234,47 +247,47 @@ note {
 
 topcomment {
     display:block;
-    margin:20px;
+    margin:.66em;
 }
 
 .singlecomment {
     background-color: #eee;
     border: 1px dotted #ccc;
-    padding: 15px;
-    margin:10px;
+    padding: .33em;
+    margin:.66em;
 }
 
 .commentreplies h2 {
-    font-size: 18px;
+    font-size: large;
     border-bottom: 1px solid #aaa;
 }
 
 .commentreplies {
-    margin-left:50px;
-    margin-bottom:50px;
+    margin-left:2em;
+    margin-bottom:2em;
 }
 
 .userinfo ul li {
-    margin-bottom:10px;
+    margin-bottom:.33em;
 }
 
 .userinfo pre {
     color: #666;
     font-style: italic;
-    margin:20px;
+    margin:.66em;
 }
 
 .userinfo .avatar img {
-    width:48px;
-    height:48px;
+    width:32px;
+    height:32px;
 }
 
 .userinfo h2 {
     position:relative;
-    left:15px;
-    top:-15px;
+    left:.33em;
+    top:-.33em;
     display:inline;
-    font-size:28px;
+    font-size:small;
     color: #444;
 }
 
@@ -283,26 +296,49 @@ topcomment {
 }
 
 .replies sup {
-    font-size:12px;
+    font-size:2em;
     color: white;
     background-color:red;
     border: red 1px solid;
-    border-radius: 25px;
-    padding-left:3px;
-    padding-right:3px;
+    border-radius: 1.66em;
+    padding-left:.33em;
+    padding-right:.33em;
     position:relative;
-    top:-7px;
-    left:-5px;
+    top:-.66em;
+    left:-.33em;
     opacity:0.7
 }
 
 #adminlinks li {
     list-style-type: disc;
-    margin-left:20px;
+    margin-left:.33em;
 }
 
 #adminlinks h3 {
-    margin-top:20px;
-    margin-bottom:5px;
+    margin-top:1.66em;
+    margin-bottom:.33em;
     font-weight: bold;
+}
+
+#guidelines {
+    width: 40em
+}
+
+#guidelines h3 {
+    margin-top:1.66em;
+    margin-bottom:.33em;
+    font-weight: bold;
+}
+
+#guidelines h2 {
+    margin-top:1.66em;
+    margin-bottom:.33em;
+    font-weight: bold;
+}
+
+#guidelines p {
+    margin-top:1.66em;
+    margin-bottom:.33em;
+    margin-left: 2em;
+    font-size: .9em;
 }

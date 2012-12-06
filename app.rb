@@ -213,7 +213,7 @@ get '/login' do
         H.div(:id => "login") {
             H.form(:name=>"f") {
                 H.label(:for => "username") {"username"}+
-                H.inputtext(:id => "username", :name => "username")+
+                H.inputtext(:id => "username", :name => "username")+H.br+
                 H.label(:for => "password") {"password"}+
                 H.inputpass(:id => "password", :name => "password")+H.br+
                 H.checkbox(:name => "register", :value => "1")+
@@ -446,7 +446,7 @@ get "/editcomment/:news_id/:comment_id" do
     comment = Comments.fetch(params["news_id"],params["comment_id"])
     halt(404,"404 - This comment does not exist.") if !comment
     user = get_user_by_id(comment["user_id"]) || DeletedUser
-    halt(500,"Permission denied.") if $user['id'].to_i != user['id'].to_i
+    halt(500,"Permission denied.") if (!user_is_admin?($user) and ($user['id'].to_i != user['id'].to_i))
 
     H.set_title "Edit comment - #{SiteName}"
     H.page {
@@ -632,6 +632,35 @@ get '/admin' do
                 }
             }
         }
+    }
+end
+
+get '/guidelines' do
+    H.page {
+        H.div(:id => "guidelines") {
+            H.h2 {"ict4d News Guidelines"}+
+	        H.p {"Graciously cribbed from Hacker News' <a href='http://ycombinator.com/newsguidelines.html'>guidelines</a>"}+
+	    H.h3 {"What to Submit"}+
+		H.p {"On-Topic: Anything that ict4d practicioners (development professionals, software developers, etc) would find interesting. That includes more than international development and software development. If you had to reduce it to a sentence, the answer might be: anything that gratifies one's intellectual curiosity."}+
+		H.p {"Off-Topic: Most stories about politics, or crime, or sports, unless they're evidence of some interesting new phenomenon. Videos of pratfalls or disasters, or cute animal pictures. If they'd cover it on TV news, it's probably off-topic."}+
+	    H.h3 {"In Submissions"}+
+	        H.p {"Please don't do things to make titles stand out, like using uppercase or exclamation points, or adding a parenthetical remark saying how great an article is. It's implicit in submitting something that you think it's important."}+
+		H.p {"If you submit a link to a video or pdf, please warn us by appending [video] or [pdf] to the title. Also warn us about job postings with adding [job] to the title."}+
+		H.p {"Please submit the original source. If a blog post reports on something they found on another site, submit the latter."}+
+		H.p {"If the original title includes the name of the site, please take it out, because the site name will be displayed after the link anyway."}+
+		H.p {"Otherwise please use the original title, unless it is misleading or linkbait."}+
+		H.p {"Don't abuse the text field in the submission form to add commentary to links. The text field is for starting discussions. If you're submitting a link, put it in the url field. If you want to add initial commentary on the link, write a blog post about it and submit that instead."}+
+		H.p {"Please don't submit so many links at once that the new page is dominated by your submissions."}+
+	    H.h3 {"In Comments"}+
+	        H.p {"Be civil. Don't say things you wouldn't say in a face to face conversation."}+
+		H.p {"When disagreeing, please reply to the argument instead of calling names. E.g. \"That is an idiotic thing to say; 1 + 1 is 2, not 3\" can be shortened to \"1 + 1 is 2, not 3.\""}+
+		H.p {"Please avoid introducing classic flamewar topics unless you have something genuinely new to say about them."}+
+		H.p {"Please don't sign comments, especially with your url. They're already signed with your username. If other users want to learn more about you, they can click on it to see your profile."}+
+		H.p {"Please don't use uppercase for emphasis. If you want to emphasize a word or phrase, put *asterisks* around it and it will get italicized."}+
+		H.p {"Please don't submit comments complaining that a submission is inappropriate for the site. If you think something is spam or offtopic, flag it by going to its page and clicking on the \"flag\" link. (Not all users will see this; there is a karma threshold.) If you flag something, please don't also comment that you did."}+
+		H.p {"Resist complaining about being downmodded. It never does any good, and it makes boring reading."}+
+		H.p {"Please don't bait other users by inviting them to downmod you."}
+	}
     }
 end
 
@@ -1075,6 +1104,7 @@ def application_footer
     end
     H.footer {
         links = [
+	    ["guidelines", "/guidelines"],
             ["source code", "http://github.com/ewheeler/lamernews"],
             ["rss feed", "/rss"],
             ["twitter", FooterTwitterLink],
@@ -1161,8 +1191,10 @@ def create_user(username,password)
     if $r.exists("username.to.id:#{username.downcase}")
         return nil, "Username is already taken, please try a different one."
     end
-    if !user_is_admin?($user) and rate_limit_by_ip(3600*15,"create_user",request.ip)
-        return nil, "Please wait some time before creating a new user."
+    if rate_limit_by_ip(3600*15,"create_user",request.ip)
+        if !user_is_admin?($user)
+            return nil, "Please wait some time before creating a new user."
+	end
     end
     id = $r.incr("users.count")
     auth_token = get_rand
@@ -1880,7 +1912,9 @@ def insert_comment(news_id,user_id,comment_id,parent_id,body)
     # We also make sure the user is in time for an edit operation.
     c = Comments.fetch(news_id,comment_id)
     return false if !c or (!user_is_admin?($user) and (c['user_id'].to_i != user_id.to_i))
-    return false if !(c['ctime'].to_i > (Time.now.to_i - CommentEditTime))
+    if !user_is_admin?($user)
+        return false if !(c['ctime'].to_i > (Time.now.to_i - CommentEditTime))
+    end
 
     if body.length == 0
         return false if !Comments.del_comment(news_id,comment_id)
@@ -1928,7 +1962,7 @@ end
 # 'c' is the comment representation as a Ruby hash.
 # 'u' is the user, obtained from the user_id by the caller.
 def comment_to_html(c,u)
-    indent = "margin-left:#{c['level'].to_i*CommentReplyShift}px"
+    indent = "margin-left:#{c['level'].to_i*CommentReplyShift}em"
     score = compute_comment_score(c)
     news_id = c['thread_id']
 
@@ -1939,7 +1973,7 @@ def comment_to_html(c,u)
     end
     show_edit_link = !c['topcomment'] &&
                 ($user && (user_is_admin?($user) || $user['id'].to_i == c['user_id'].to_i)) &&
-                (c['ctime'].to_i > (Time.now.to_i - CommentEditTime))
+                (user_is_admin?($user) || (c['ctime'].to_i > (Time.now.to_i - CommentEditTime)))
 
     comment_id = "#{news_id}-#{c['id']}"
     H.article(:class => "comment", :style => indent,
@@ -1947,7 +1981,7 @@ def comment_to_html(c,u)
         H.span(:class => "avatar") {
             email = u["email"] || ""
             digest = Digest::MD5.hexdigest(email)
-            H.img(:src=>"http://gravatar.com/avatar/#{digest}?s=48&d=mm")
+            H.img(:src=>"http://gravatar.com/avatar/#{digest}?s=32&d=mm")
         }+H.span(:class => "info") {
             H.span(:class => "username") {
                 H.a(:href=>"/user/"+H.urlencode(u["username"])) {
